@@ -1,6 +1,8 @@
 /*
     TODO:
     * UX
+    * JPEG-ify
+    * export meme
 */
 
 function EasyMeme() {
@@ -84,8 +86,11 @@ function EasyMeme() {
         var image;
 
         function createImage() {
-            if (!image)
-                return Helper.createElement("img");
+            if (!image) {
+                imageElement = Helper.createElement("img");
+                imageElement.crossOrigin = "anonymous";
+                return imageElement;
+            }
         }
 
         var hideImage = function hideImage() {
@@ -150,7 +155,7 @@ function EasyMeme() {
 
         }
 
-        var setBackgroundColor = function setBackgroundColor (color) {
+        var setBackgroundColor = function setBackgroundColor(color) {
             context.fillStyle = color;
             context.fillRect(0, 0, canvas.width, canvas.height);
             context.stroke();
@@ -184,6 +189,18 @@ function EasyMeme() {
             return canvas.width;
         }
 
+        var exportCanvas = function exportCanvas(type, quality) {
+            if (!type || !Helper.checkType(type, "string")) {
+                type = "image/jpeg";
+            }
+
+            if (!quality || !Helper.checkType(quality, "number") || quality > 1 || quality < 0) {
+                quality = 0.7;
+            }
+            //console.log("dataURL:", canvas.toDataURL("image/jpeg", 0.7));
+            return canvas.toDataURL(type, quality);
+        }
+
         function bindCanvas(canvasID) {
             canvas = Helper.getElement(canvasID);
             context = canvas.getContext("2d");
@@ -202,6 +219,7 @@ function EasyMeme() {
             this.restore = restore;
             this.getContext = getContext;
             this.setBackgroundColor = setBackgroundColor;
+            this.exportCanvas = exportCanvas;
 
             bindCanvas(canvasID);
             console.log("CanvasManager successfully initiated.");
@@ -213,6 +231,7 @@ function EasyMeme() {
     }
 
     // CURRY BOYS
+    // Super duper messy. Please clean later
     var upload = function upload(imageManager, canvasManager) {
         return function (src, text) {
             if (!Helper.checkType(src, "string"))
@@ -250,7 +269,7 @@ function EasyMeme() {
                             context.font = fontSize.toString().concat("px") + " Calibri";
                             context.textBaseline = "bottom";
 
-                            var padding = fontSize/2;
+                            var padding = fontSize / 2;
 
                             // word breakdown stuff:
                             var splitText = text.split(" ");
@@ -274,6 +293,15 @@ function EasyMeme() {
                             for (let i = 0; i < wrappedTextArray.length; i++) {
                                 var line = wrappedTextArray[i];
                                 canvasManager.drawText(line, padding, padding + (fontSize * (i + 1)), { fontSize: fontSize, fontFamily: "Calibri", textBaseline: "bottom" });
+                            }
+
+                            var finalImage = Helper.createElement("img");
+                            finalImage.src = canvasManager.exportCanvas("image/jpeg", 0.5);
+                            finalImage.crossOrigin = "anonymous";
+
+                            finalImage.onload = function () {
+                                canvasManager.drawImage(finalImage, 0, 0);
+                                console.log("finalImage:", finalImage);
                             }
                         }
                     }
@@ -312,7 +340,7 @@ easyMeme.initiate(/*"URL-text-box", "upload-button"*/ "result");
 var textTextBox = document.getElementById("text-text-box");
 
 var URLTextBox = document.getElementById("URL-text-box");
-URLTextBox.value = "https://i.imgur.com/jzCwpMr.jpg"; // temporary
+URLTextBox.value = "https://i.imgur.com/uQGDVFO.jpg"; // temporary
 
 var uploadButton = document.getElementById("upload-button");
 uploadButton.addEventListener("click", function () {
