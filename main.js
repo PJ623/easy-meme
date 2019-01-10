@@ -238,6 +238,7 @@ function EasyMeme() {
                 console.warn("'" + src + "' is not a string.");
 
             var image;
+            var easyMeme = this;
 
             fetch(src)
                 .then(
@@ -301,7 +302,9 @@ function EasyMeme() {
 
                             finalImage.onload = function () {
                                 canvasManager.drawImage(finalImage, 0, 0);
-                                console.log("finalImage:", finalImage);
+
+                                if (easyMeme.download)
+                                    easyMeme.download(finalImage);
                             }
                         }
                     }
@@ -310,6 +313,15 @@ function EasyMeme() {
                         console.error(e);
                     }
                 );
+        }
+    }
+
+    var prepareDownloadLink = function prepareDownloadLink(anchorID) {
+        var downloadLink = Helper.getElement(anchorID);
+
+        this.download = function (finalImage) {
+            downloadLink.href = finalImage.src;
+            downloadLink.download = "meme";
         }
     }
 
@@ -323,6 +335,7 @@ function EasyMeme() {
             canvasManager.initiate(canvasID);
             document.body.appendChild(imageManager.getImage()); // Put this somewhere cleaner
             this.upload = upload(imageManager, canvasManager); // CURRY!
+            this.prepareDownloadLink = prepareDownloadLink;
         } catch (e) {
             console.error(e);
         }
@@ -341,6 +354,8 @@ var textTextBox = document.getElementById("text-text-box");
 
 var URLTextBox = document.getElementById("URL-text-box");
 URLTextBox.value = "https://i.imgur.com/uQGDVFO.jpg"; // temporary
+
+easyMeme.prepareDownloadLink("download-link");
 
 var uploadButton = document.getElementById("upload-button");
 uploadButton.addEventListener("click", function () {
