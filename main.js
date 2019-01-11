@@ -49,7 +49,25 @@ function EasyMeme() {
                     resultWidth = context.measureText(result).width;
                     let nextResultWidth = resultWidth + tokenWidth;
 
+                    // Dealing with explicit linebreaks:
+                    if (token == "\n") {
+                        console.log("linebreak encountered!");
+                        var linebreak = "";
+                        var linebreakWidth = 0;
+
+                        while (resultWidth + linebreakWidth < maxWidth) {
+                            linebreak = linebreak.concat(" ");
+                            linebreakWidth = context.measureText(linebreak).width;
+                        }
+
+                        result = result.concat(linebreak, "");
+                        nextResultWidth = resultWidth + linebreakWidth;
+                        i++;
+                    }
+
+                    // Make new line if the current line is longer than the width of the canvas.
                     if (nextResultWidth > maxWidth) {
+                        console.log("Making new line...");
                         for (let j = i; j < splitText.length; j++)
                             leftovers.push(splitText[j]);
                         break;
@@ -58,13 +76,17 @@ function EasyMeme() {
                     if (i > 0)
                         filler = divider;
 
+                    console.log("linebreakEncountered == false. filler: " + "'" + filler + "'" + " token: " + "'" + token + "'");
                     result = result.concat(filler + token);
+
                 }
 
                 lineArray.push(result);
 
                 if (leftovers.length > 0)
                     wrapText(leftovers.join(divider), divider, maxWidth);
+
+                console.log("LA:", lineArray);
 
                 return lineArray;
             }
@@ -273,16 +295,28 @@ function EasyMeme() {
                             var padding = fontSize / 2;
 
                             // word breakdown stuff:
+                            /*
+                            var splitLines = text.split("\n");
+                            console.log("EST:", splitLines);*/
+
+                            //var splitText = splitLines.join(" \n ").split(" ");
                             var splitText = text.split(" ");
+                            console.log("ST:", splitText);
+
                             var wrappedLettersArray = [];
                             for (let i = 0; i < splitText.length; i++) {
                                 var letterWrapper = Helper.TextWrapper(context);
                                 wrappedLettersArray.push(letterWrapper(splitText[i], "", canvasManager.getWidth() - (padding * 2)));
                             }
 
+                            console.log("wrappedLettersArray (joined with ''):", wrappedLettersArray);
+
                             var auditedText = Helper.deepArrayToString(wrappedLettersArray);
                             var wordWrapper = Helper.TextWrapper(context);
                             var wrappedTextArray = wordWrapper(auditedText, " ", canvasManager.getWidth() - (padding * 2)); // CURRIED, FRIENDS
+
+                            //console.log("AuditedText:", auditedText);
+                            console.log("wrappedTextArray (joined with ' '):", wrappedTextArray);
 
                             var textSpace = (padding * 2) + (wrappedTextArray.length * fontSize);
                             canvasManager.setHeight(image.height + textSpace); // reset height
@@ -360,4 +394,5 @@ easyMeme.prepareDownloadLink("download-link");
 var uploadButton = document.getElementById("upload-button");
 uploadButton.addEventListener("click", function () {
     easyMeme.upload(URLTextBox.value, textTextBox.value);
+    console.log("TTBV:", textTextBox.value);
 });
