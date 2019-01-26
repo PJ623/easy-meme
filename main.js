@@ -31,64 +31,70 @@ function EasyMeme() {
             return document.createElement(typeOfElement);
         },
         // Move to canvasManager or generalize further?
-        TextWrapper: function TextWrapper(context) {
-            var lineArray = [];
+        TextWrapper: function TextWrapper(context, maxLineWidth) {
 
-            return function wrapText(text, divider, maxWidth) {
-                if (!divider)
-                    divider = "";
+            function measureText(text) {
+                return context.measureText(text).width;
+            }
 
-                var splitText = text.split(divider);
-                var filler = "";
-                var leftovers = [];
-                var result = "";
+            // fits text into lines of text
+            function wrapText(text, splitter) {
+                var output = []; // stores lines of text
+                var outputIndex = 0; // increments when new line is needed
+                var textArray = text.split(splitter);
+                var line = "";
 
-                for (let i = 0; i < splitText.length; i++) {
-                    let token = splitText[i];
-                    let tokenWidth = context.measureText(token).width;
-                    resultWidth = context.measureText(result).width;
-                    let nextResultWidth = resultWidth + tokenWidth;
+                for (let i = 0; i < textArray.length; i++) {
+                    line = line.concat(textArray[i]);
 
-                    // Dealing with explicit linebreaks:
-                    if (token == "\n") {
-                        console.log("linebreak encountered!");
-                        var linebreak = "";
-                        var linebreakWidth = 0;
+                    if (i < (textArray.length - 1) && measureText(line.concat(splitter)) <= maxLineWidth)
+                        line = line.concat(splitter);
 
-                        while (resultWidth + linebreakWidth < maxWidth) {
-                            linebreak = linebreak.concat(" ");
-                            linebreakWidth = context.measureText(linebreak).width;
-                        }
+                    // If line fits, store line's value.
+                    if (measureText(line) <= maxLineWidth) {
+                        output[outputIndex] = line;
 
-                        result = result.concat(linebreak, "");
-                        nextResultWidth = resultWidth + linebreakWidth;
-                        i++;
+                        // If line is too long, create a new line and retry.
+                    } else {
+                        outputIndex++;
+                        i--;
+                        line = "";
                     }
-
-                    // Make new line if the current line is longer than the width of the canvas.
-                    if (nextResultWidth > maxWidth) {
-                        console.log("Making new line...");
-                        for (let j = i; j < splitText.length; j++)
-                            leftovers.push(splitText[j]);
-                        break;
-                    }
-
-                    if (i > 0)
-                        filler = divider;
-
-                    console.log("linebreakEncountered == false. filler: " + "'" + filler + "'" + " token: " + "'" + token + "'");
-                    result = result.concat(filler + token);
-
                 }
 
-                lineArray.push(result);
+                return output;
+            }
 
-                if (leftovers.length > 0)
-                    wrapText(leftovers.join(divider), divider, maxWidth);
+            // Uses wrapText(..) multiple times to wrap complex bodies of text
+            return function (text) {
 
-                console.log("LA:", lineArray);
+                // Tokenizes paragraphs into sentences
+                var lines = text.split("\n");
+                var wrappedLines = [];
 
-                return lineArray;
+                for (let i = 0; i < lines.length; i++) {
+
+                    // Tokenizes sentences into words
+                    var words = lines[i].split(" ");
+                    wrappedLines[i] = [];
+
+                    // Wraps words to fit onto canvas
+                    for (let j = 0; j < words.length; j++) {
+                        var wrappedChars = wrapText(words[j], "");
+                        wrappedLines[i].push(wrappedChars.join(" "));
+                    }
+                    wrappedLines[i] = wrappedLines[i].join(" ");
+
+                    // Wraps sentences to fit onto canvas
+                    var wrappedWords = wrapText(wrappedLines[i], " ");
+
+                    for (let j = 0; j < wrappedWords.length; j++) {
+                        wrappedWords[j] = wrappedWords[j].trim();
+                    }
+                    wrappedLines[i] = wrappedWords;
+                }
+
+                return wrappedLines;
             }
         },
         deepArrayToString: function deepArrayToString(arr, joiner) {
@@ -252,15 +258,72 @@ function EasyMeme() {
         };
     }
 
+    function assembleMeme(imageManager, canvasManager) {
+        return function (src, text) {
+            imageManager.setImage(src);
+            image = imageManager.getImage();
+
+            image.onload = function () {
+                // Move this stuff?
+                var fontSize;
+
+                // make more robust
+                function calculateFontSize() {
+                    if (!text)
+                        return 0;
+                    return (image.height / 18);
+                }
+
+                fontSize = calculateFontSize();
+                canvasManager.setWidth(image.width);
+                canvasManager.setHeight(image.height);
+
+                var context = canvasManager.getContext();
+                context.font = fontSize.toString().concat("px") + " Calibri";
+                context.textBaseline = "bottom";
+
+                var padding = fontSize / 2;
+
+                // Wrap text
+                var textWrapper = Helper.TextWrapper(context, canvasManager.getWidth() - (padding * 2));
+                var wrappedTextArray = textWrapper(text);
+
+                var textSpace = (padding * 2) + (wrappedTextArray.length * fontSize) + fontSize;
+                canvasManager.setHeight(image.height + textSpace); // reset height
+                context.save();
+                canvasManager.setBackgroundColor("#FFFFFF");
+                context.restore();
+                canvasManager.drawImage(image, 0, textSpace);
+
+                // Render
+                var yOffset = fontSize;
+                for (let i = 0; i < wrappedTextArray.length; i++) {
+                    for (let j = 0; j < wrappedTextArray[i].length; j++) {
+                        canvasManager.drawText(wrappedTextArray[i][j], padding, yOffset, { fontSize: fontSize, fontFamily: "Calibri", textBaseline: "bottom" });
+                        yOffset = yOffset + fontSize;
+                    }
+                }
+
+                var finalImage = Helper.createElement("img");
+                finalImage.src = canvasManager.exportCanvas("image/jpeg", 0.5);
+                finalImage.crossOrigin = "anonymous";
+
+                finalImage.onload = function () {
+                    canvasManager.drawImage(finalImage, 0, 0);
+
+                    if (easyMeme.download)
+                        easyMeme.download(finalImage);
+                }
+            }
+        }
+    }
+
     // CURRY BOYS
     // Super duper messy. Please clean later
     var upload = function upload(imageManager, canvasManager) {
         return function (src, text) {
             if (!Helper.checkType(src, "string"))
                 console.warn("'" + src + "' is not a string.");
-
-            var image;
-            var easyMeme = this;
 
             fetch(src)
                 .then(
@@ -270,77 +333,8 @@ function EasyMeme() {
                             return;
                         }
 
-                        imageManager.setImage(src);
-                        image = imageManager.getImage();
-
-                        image.onload = function () {
-                            // Move this stuff?
-                            var fontSize;
-
-                            // make more robust
-                            function calculateFontSize() {
-                                if (!text)
-                                    return 0;
-                                return (image.height / 18);
-                            }
-
-                            fontSize = calculateFontSize();
-                            canvasManager.setWidth(image.width);
-                            canvasManager.setHeight(image.height);
-
-                            var context = canvasManager.getContext();
-                            context.font = fontSize.toString().concat("px") + " Calibri";
-                            context.textBaseline = "bottom";
-
-                            var padding = fontSize / 2;
-
-                            // word breakdown stuff:
-                            /*
-                            var splitLines = text.split("\n");
-                            console.log("EST:", splitLines);*/
-
-                            //var splitText = splitLines.join(" \n ").split(" ");
-                            var splitText = text.split(" ");
-                            console.log("ST:", splitText);
-
-                            var wrappedLettersArray = [];
-                            for (let i = 0; i < splitText.length; i++) {
-                                var letterWrapper = Helper.TextWrapper(context);
-                                wrappedLettersArray.push(letterWrapper(splitText[i], "", canvasManager.getWidth() - (padding * 2)));
-                            }
-
-                            console.log("wrappedLettersArray (joined with ''):", wrappedLettersArray);
-
-                            var auditedText = Helper.deepArrayToString(wrappedLettersArray);
-                            var wordWrapper = Helper.TextWrapper(context);
-                            var wrappedTextArray = wordWrapper(auditedText, " ", canvasManager.getWidth() - (padding * 2)); // CURRIED, FRIENDS
-
-                            //console.log("AuditedText:", auditedText);
-                            console.log("wrappedTextArray (joined with ' '):", wrappedTextArray);
-
-                            var textSpace = (padding * 2) + (wrappedTextArray.length * fontSize);
-                            canvasManager.setHeight(image.height + textSpace); // reset height
-                            context.save();
-                            canvasManager.setBackgroundColor("#FFFFFF");
-                            context.restore();
-                            canvasManager.drawImage(image, 0, textSpace);
-
-                            for (let i = 0; i < wrappedTextArray.length; i++) {
-                                var line = wrappedTextArray[i];
-                                canvasManager.drawText(line, padding, padding + (fontSize * (i + 1)), { fontSize: fontSize, fontFamily: "Calibri", textBaseline: "bottom" });
-                            }
-
-                            var finalImage = Helper.createElement("img");
-                            finalImage.src = canvasManager.exportCanvas("image/jpeg", 0.5);
-                            finalImage.crossOrigin = "anonymous";
-
-                            finalImage.onload = function () {
-                                canvasManager.drawImage(finalImage, 0, 0);
-
-                                if (easyMeme.download)
-                                    easyMeme.download(finalImage);
-                            }
-                        }
+                        var memeAssembler = assembleMeme(imageManager, canvasManager);
+                        memeAssembler(src, text);
                     }
                 ).catch(
                     function (e) {
@@ -387,12 +381,19 @@ easyMeme.initiate(/*"URL-text-box", "upload-button"*/ "result");
 var textTextBox = document.getElementById("text-text-box");
 
 var URLTextBox = document.getElementById("URL-text-box");
-URLTextBox.value = "https://i.imgur.com/uQGDVFO.jpg"; // temporary
+URLTextBox.value = "https://i.imgur.com/32tBLV9.jpg"; // temporary
+
+var fileBox = document.getElementById("file-box");
 
 easyMeme.prepareDownloadLink("download-link");
 
 var uploadButton = document.getElementById("upload-button");
 uploadButton.addEventListener("click", function () {
-    easyMeme.upload(URLTextBox.value, textTextBox.value);
+    if (fileBox.files[0]) {
+        console.log("fileBox.files:", fileBox.files[0]);
+        //easyMeme.upload(fileBox.files[0].);
+    } else {
+        easyMeme.upload(URLTextBox.value, textTextBox.value);
+    }
     console.log("TTBV:", textTextBox.value);
 });
