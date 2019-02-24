@@ -288,7 +288,21 @@ function EasyMeme() {
                 var textWrapper = Helper.TextWrapper(context, canvasManager.getWidth() - (padding * 2));
                 var wrappedTextArray = textWrapper(text);
 
-                var textSpace = (padding * 2) + (wrappedTextArray.length * fontSize) + fontSize;
+                function countLines(textArray) {
+                    var lineCount = 0;
+                    for (let i = 0; i < textArray.length; i++) {
+                        if (Array.isArray(textArray[i]))
+                            lineCount += countLines(textArray[i]);
+                        else
+                            lineCount++;
+                    }
+                    return lineCount;
+                }
+
+                var lineCount = countLines(wrappedTextArray);
+
+                var textSpace = (padding * 2) + (lineCount * fontSize);
+
                 canvasManager.setHeight(image.height + textSpace); // reset height
                 context.save();
                 canvasManager.setBackgroundColor("#FFFFFF");
@@ -298,6 +312,9 @@ function EasyMeme() {
                 // Render
                 var yOffset = fontSize;
                 for (let i = 0; i < wrappedTextArray.length; i++) {
+                    if (i == 0) {
+                        yOffset = fontSize + padding;
+                    }
                     for (let j = 0; j < wrappedTextArray[i].length; j++) {
                         canvasManager.drawText(wrappedTextArray[i][j], padding, yOffset, { fontSize: fontSize, fontFamily: "Calibri", textBaseline: "bottom" });
                         yOffset = yOffset + fontSize;
