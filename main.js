@@ -94,19 +94,23 @@ function EasyMeme() {
                     wrappedLines[i] = wrappedWords;
                 }
 
-                return wrappedLines;
-            }
-        },
-        deepArrayToString: function deepArrayToString(arr, joiner) {
-            if (!joiner)
-                joiner = " ";
+                function flattenArray(textArray, result) {
+                    if (!result)
+                        result = [];
 
-            for (let i = 0; i < arr.length; i++) {
-                if (Array.isArray(arr[i]))
-                    arr[i] = deepArrayToString(arr[i]);
-            }
+                    for (let i = 0; i < textArray.length; i++) {
+                        if (Array.isArray(textArray[i]))
+                            flattenArray(textArray[i], result);
+                        else
+                            result.push(textArray[i]);
+                    }
+                    return result;
+                }
 
-            return arr.join(joiner);
+                var flattenedArray = flattenArray(wrappedLines);
+
+                return flattenedArray;
+            }
         }
     };
 
@@ -287,21 +291,7 @@ function EasyMeme() {
                 // Wrap text
                 var textWrapper = Helper.TextWrapper(context, canvasManager.getWidth() - (padding * 2));
                 var wrappedTextArray = textWrapper(text);
-
-                function countLines(textArray) {
-                    var lineCount = 0;
-                    for (let i = 0; i < textArray.length; i++) {
-                        if (Array.isArray(textArray[i]))
-                            lineCount += countLines(textArray[i]);
-                        else
-                            lineCount++;
-                    }
-                    return lineCount;
-                }
-
-                var lineCount = countLines(wrappedTextArray);
-
-                var textSpace = (padding * 2) + (lineCount * fontSize);
+                var textSpace = (padding * 2) + (wrappedTextArray.length * fontSize);
 
                 canvasManager.setHeight(image.height + textSpace); // reset height
                 context.save();
@@ -312,13 +302,11 @@ function EasyMeme() {
                 // Render
                 var yOffset = fontSize;
                 for (let i = 0; i < wrappedTextArray.length; i++) {
-                    if (i == 0) {
+                    if (i == 0)
                         yOffset = fontSize + padding;
-                    }
-                    for (let j = 0; j < wrappedTextArray[i].length; j++) {
-                        canvasManager.drawText(wrappedTextArray[i][j], padding, yOffset, { fontSize: fontSize, fontFamily: "Calibri", textBaseline: "bottom" });
-                        yOffset = yOffset + fontSize;
-                    }
+
+                    canvasManager.drawText(wrappedTextArray[i], padding, yOffset, { fontSize: fontSize, fontFamily: "Calibri", textBaseline: "bottom" });
+                    yOffset = yOffset + fontSize;
                 }
 
                 var finalImage = Helper.createElement("img");
@@ -364,6 +352,7 @@ function EasyMeme() {
     var prepareDownloadLink = function prepareDownloadLink(anchorID) {
         var downloadLink = Helper.getElement(anchorID);
 
+        // Take into account user's selected image size
         this.download = function (finalImage) {
             downloadLink.href = finalImage.src;
             downloadLink.download = "meme";
