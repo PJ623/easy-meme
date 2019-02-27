@@ -407,10 +407,12 @@ easyMeme.prepareDownloadLink("download-link");
 var uploadButton = document.getElementById("upload-button");
 uploadButton.addEventListener("click", function () {
     if (fileBox.files[0]) {
-        console.log("fileBox.files:", fileBox.files[0]);
-        //easyMeme.upload(fileBox.files[0].);
+        let fileReader = new FileReader();
+        fileReader.onload = function () {
+            easyMeme.upload(this.result, textTextBox.value);
+        };
+        fileReader.readAsDataURL(fileBox.files[0]);
     } else {
         easyMeme.upload(URLTextBox.value, textTextBox.value);
     }
-    console.log("TTBV:", textTextBox.value);
 });
