@@ -309,6 +309,8 @@ function EasyMeme() {
                     yOffset = yOffset + fontSize;
                 }
 
+                // TODO: Assemble images of preset sizes
+
                 var finalImage = Helper.createElement("img");
                 finalImage.src = canvasManager.exportCanvas("image/jpeg", 0.5);
                 finalImage.crossOrigin = "anonymous";

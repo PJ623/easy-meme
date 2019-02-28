@@ -8,13 +8,18 @@
 
 <body>
     <div class="wrapper">
+        <h1>Easy Meme</h1>
         <div id="control-panel">
+            <div class="file-upload">
+                <input id="URL-text-box" type="text">
+                or
+                <input type="file" id="file-box" accept="image/png, image/jpeg">
+            </div>
             <textarea id="text-text-box" type="text"></textarea>
-            <input id="URL-text-box" type="text">
-            <input type="file" id="file-box" accept="image/png, image/jpeg">
             <button id="upload-button">#upload-button</button>
         </div>
         <div>
+            <!-- load with placeholder image -->
             <canvas id="result"></canvas>
         </div>
         <a id="download-link" href="">#download-link</a>
