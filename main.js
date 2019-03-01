@@ -1,8 +1,6 @@
 /*
     TODO:
     * UX
-    * JPEG-ify
-    * export meme
 */
 
 function EasyMeme() {
@@ -114,52 +112,6 @@ function EasyMeme() {
         }
     };
 
-    function ImageManager() {
-        var image;
-
-        function createImage() {
-            if (!image) {
-                imageElement = Helper.createElement("img");
-                imageElement.crossOrigin = "anonymous";
-                return imageElement;
-            }
-        }
-
-        var hideImage = function hideImage() {
-            image.style.display = "none";
-        }
-
-        var showImage = function showImage() {
-            image.style.display = "block";
-        }
-
-        // turn into changeImage
-        var setImage = function setImage(src) {
-            if (!Helper.checkType(src, "string"))
-                console.error("'" + src + "' is not a string.");
-            else
-                image.src = src;
-        }
-
-        var getImage = function getImage() {
-            return image;
-        }
-
-        var initiate = function initiate() {
-            console.log("Initiating ImageManager...");
-            image = createImage();
-            this.setImage = setImage;
-            this.getImage = getImage;
-            this.hideImage = hideImage;
-            this.showImage = showImage;
-            console.log("ImageManager successfully initiated.");
-        }
-
-        return {
-            initiate: initiate
-        }
-    }
-
     function CanvasManager() {
         var canvas;
         var context;
@@ -179,12 +131,12 @@ function EasyMeme() {
             context.restore();
         }
 
-        var drawImage = function drawImage(image, x, y) {
-            context.drawImage(image, x, y); // gonna have to make room for above text
-        }
-
-        var clear = function clear() {
-
+        var drawImage = function drawImage(image, x, y, dW, dH) {
+            if (dW && dH) {
+                context.drawImage(image, x, y, dW, dH);
+            } else {
+                context.drawImage(image, x, y);
+            }
         }
 
         var setBackgroundColor = function setBackgroundColor(color) {
@@ -262,10 +214,25 @@ function EasyMeme() {
         };
     }
 
-    function assembleMeme(imageManager, canvasManager) {
-        return function (src, text) {
-            imageManager.setImage(src);
-            image = imageManager.getImage();
+    function assembleMeme(canvasManager) {
+        return function (src, text, dimensionalLimit) {
+
+            var image;
+
+            image = Helper.createElement("img");
+            document.body.appendChild(image);
+            image.src = src;
+            image.crossOrigin = "anonymous";
+            image.style.objectFit = "contain";
+            image.style.display = "block";
+
+            if (dimensionalLimit) {
+                if (image.width > image.height && image.width > dimensionalLimit)
+                    image.width = dimensionalLimit;
+                else if (image.width < image.height && image.height > dimensionalLimit)
+                    image.height = dimensionalLimit;
+            }
+
 
             image.onload = function () {
                 // Move this stuff?
@@ -297,7 +264,7 @@ function EasyMeme() {
                 context.save();
                 canvasManager.setBackgroundColor("#FFFFFF");
                 context.restore();
-                canvasManager.drawImage(image, 0, textSpace);
+                canvasManager.drawImage(image, 0, textSpace, image.width, image.height);
 
                 // Render
                 var yOffset = fontSize;
@@ -320,6 +287,9 @@ function EasyMeme() {
 
                     if (easyMeme.download)
                         easyMeme.download(finalImage);
+
+                    image.style.display = "none"; // move elsewhere? Image displays before disappearing
+                    image.remove();
                 }
             }
         }
@@ -327,7 +297,7 @@ function EasyMeme() {
 
     // CURRY BOYS
     // Super duper messy. Please clean later
-    var upload = function upload(imageManager, canvasManager) {
+    var upload = function upload(canvasManager) {
         return function (src, text) {
             if (!Helper.checkType(src, "string"))
                 console.warn("'" + src + "' is not a string.");
@@ -340,8 +310,9 @@ function EasyMeme() {
                             return;
                         }
 
-                        var memeAssembler = assembleMeme(imageManager, canvasManager);
-                        memeAssembler(src, text);
+                        var memeAssembler = assembleMeme(canvasManager);
+                        memeAssembler(src, text, 700);
+                        //memeAssembler(src, text/*, 200*/); // offer scaled versions elsewhere
                     }
                 ).catch(
                     function (e) {
@@ -364,13 +335,9 @@ function EasyMeme() {
     var initiate = function initiate(canvasID) {
         console.log("Initiating Easy Meme...");
         try {
-            var imageManager = ImageManager();
             var canvasManager = CanvasManager();
-            imageManager.initiate();
-            imageManager.hideImage();
             canvasManager.initiate(canvasID);
-            document.body.appendChild(imageManager.getImage()); // Put this somewhere cleaner
-            this.upload = upload(imageManager, canvasManager); // CURRY!
+            this.upload = upload(canvasManager); // CURRY!
             this.prepareDownloadLink = prepareDownloadLink;
         } catch (e) {
             console.error(e);
@@ -394,6 +361,7 @@ URLTextBox.value = "https://i.imgur.com/32tBLV9.jpg"; // temporary
 var fileBox = document.getElementById("file-box");
 
 easyMeme.prepareDownloadLink("download-link");
+//easyMeme.prepareDownloadLink("download-link-small");
 
 var uploadButton = document.getElementById("upload-button");
 uploadButton.addEventListener("click", function () {
@@ -402,6 +370,7 @@ uploadButton.addEventListener("click", function () {
         fileReader.onload = function () {
             easyMeme.upload(this.result, textTextBox.value);
         };
+
         fileReader.readAsDataURL(fileBox.files[0]);
     } else {
         easyMeme.upload(URLTextBox.value, textTextBox.value);
