@@ -215,81 +215,105 @@ function EasyMeme() {
     }
 
     function assembleMeme(canvasManager) {
-        return function (src, text, dimensionalLimit) {
+        return function (src, text, downloadLinkID, dimensionalLimit) {
 
-            var image;
+            // A little hackey. Revise later.
+            var preliminaryImage;
 
-            image = Helper.createElement("img");
-            document.body.appendChild(image);
-            image.src = src;
-            image.crossOrigin = "anonymous";
-            image.style.objectFit = "contain";
-            image.style.display = "block";
+            preliminaryImage = Helper.createElement("img");
+            document.body.appendChild(preliminaryImage);
+            preliminaryImage.src = src;
+            preliminaryImage.crossOrigin = "anonymous";
+            preliminaryImage.style.objectFit = "contain";
+            preliminaryImage.style.display = "block";
 
-            if (dimensionalLimit) {
-                if (image.width > image.height && image.width > dimensionalLimit)
-                    image.width = dimensionalLimit;
-                else if (image.width < image.height && image.height > dimensionalLimit)
-                    image.height = dimensionalLimit;
-            }
+            preliminaryImage.onload = function () {
+                var image = Helper.createElement("img");
+                document.body.appendChild(image);
+                image.crossOrigin = "anonymous";
+                image.style.objectFit = "contain";
+                image.style.display = "block";
 
+                image.src = src;
 
-            image.onload = function () {
-                // Move this stuff?
-                var fontSize;
-
-                // make more robust
-                function calculateFontSize() {
-                    if (!text)
-                        return 0;
-                    return (image.height / 18);
+                if (dimensionalLimit && (preliminaryImage.width > dimensionalLimit || preliminaryImage.height > dimensionalLimit)) {
+                    if (preliminaryImage.width > preliminaryImage.height) {
+                        image.width = dimensionalLimit;
+                    }
+                    else if (preliminaryImage.width <= preliminaryImage.height) {
+                        image.height = dimensionalLimit;
+                    }
                 }
 
-                fontSize = calculateFontSize();
-                canvasManager.setWidth(image.width);
-                canvasManager.setHeight(image.height);
+                preliminaryImage.style.display = "none";
 
-                var context = canvasManager.getContext();
-                context.font = fontSize.toString().concat("px") + " Calibri";
-                context.textBaseline = "bottom";
+                image.onload = function () {
 
-                var padding = fontSize / 2;
+                    if (dimensionalLimit && (image.width > dimensionalLimit || image.height > dimensionalLimit)) {
+                        if (image.width > image.height)
+                            image.width = dimensionalLimit;
+                        else if (image.width < image.height)
+                            image.height = dimensionalLimit;
+                    }
 
-                // Wrap text
-                var textWrapper = Helper.TextWrapper(context, canvasManager.getWidth() - (padding * 2));
-                var wrappedTextArray = textWrapper(text);
-                var textSpace = (padding * 2) + (wrappedTextArray.length * fontSize);
+                    var fontSize;
 
-                canvasManager.setHeight(image.height + textSpace); // reset height
-                context.save();
-                canvasManager.setBackgroundColor("#FFFFFF");
-                context.restore();
-                canvasManager.drawImage(image, 0, textSpace, image.width, image.height);
+                    // make more robust
+                    function calculateFontSize() {
+                        if (!text)
+                            return 0;
+                        return (image.height / 18);
+                    }
 
-                // Render
-                var yOffset = fontSize;
-                for (let i = 0; i < wrappedTextArray.length; i++) {
-                    if (i == 0)
-                        yOffset = fontSize + padding;
+                    fontSize = calculateFontSize();
+                    canvasManager.setWidth(image.width);
+                    canvasManager.setHeight(image.height);
 
-                    canvasManager.drawText(wrappedTextArray[i], padding, yOffset, { fontSize: fontSize, fontFamily: "Calibri", textBaseline: "bottom" });
-                    yOffset = yOffset + fontSize;
-                }
+                    var context = canvasManager.getContext();
+                    context.font = fontSize.toString().concat("px") + " Calibri";
+                    context.textBaseline = "bottom";
 
-                // TODO: Assemble images of preset sizes
+                    var padding = fontSize / 2;
 
-                var finalImage = Helper.createElement("img");
-                finalImage.src = canvasManager.exportCanvas("image/jpeg", 0.5);
-                finalImage.crossOrigin = "anonymous";
+                    // Wrap text
+                    var textWrapper = Helper.TextWrapper(context, canvasManager.getWidth() - (padding * 2));
+                    var wrappedTextArray = textWrapper(text);
+                    var textSpace = (padding * 2) + (wrappedTextArray.length * fontSize);
 
-                finalImage.onload = function () {
-                    canvasManager.drawImage(finalImage, 0, 0);
+                    canvasManager.setHeight(image.height + textSpace); // reset height
+                    context.save();
+                    canvasManager.setBackgroundColor("#FFFFFF");
+                    context.restore();
+                    canvasManager.drawImage(image, 0, textSpace, image.width, image.height);
 
-                    if (easyMeme.download)
-                        easyMeme.download(finalImage);
+                    // Render
+                    var yOffset = fontSize;
+                    for (let i = 0; i < wrappedTextArray.length; i++) {
+                        if (i == 0)
+                            yOffset = fontSize + padding;
 
-                    image.style.display = "none"; // move elsewhere? Image displays before disappearing
-                    image.remove();
+                        canvasManager.drawText(wrappedTextArray[i], padding, yOffset, { fontSize: fontSize, fontFamily: "Calibri", textBaseline: "bottom" });
+                        yOffset = yOffset + fontSize;
+                    }
+
+                    // TODO: Assemble images of preset sizes
+
+                    var finalImage = Helper.createElement("img");
+                    finalImage.src = canvasManager.exportCanvas("image/jpeg", 0.5);
+                    finalImage.crossOrigin = "anonymous";
+
+                    finalImage.onload = function () {
+                        canvasManager.drawImage(finalImage, 0, 0);
+
+                        if (typeof downloadLinkID == "string" && Helper.getElement(downloadLinkID)) {
+                            var downloadLink = Helper.getElement(downloadLinkID);
+                            downloadLink.href = finalImage.src;
+                            downloadLink.download = "meme.jpeg";
+                        }
+
+                        image.style.display = "none"; // move elsewhere? Image displays before disappearing
+                        image.remove();
+                    }
                 }
             }
         }
@@ -311,8 +335,8 @@ function EasyMeme() {
                         }
 
                         var memeAssembler = assembleMeme(canvasManager);
-                        memeAssembler(src, text, 700);
-                        //memeAssembler(src, text/*, 200*/); // offer scaled versions elsewhere
+                        memeAssembler(src, text, "download-link");
+                        memeAssembler(src, text, "download-link-small", 700);
                     }
                 ).catch(
                     function (e) {
@@ -322,23 +346,12 @@ function EasyMeme() {
         }
     }
 
-    var prepareDownloadLink = function prepareDownloadLink(anchorID) {
-        var downloadLink = Helper.getElement(anchorID);
-
-        // Take into account user's selected image size
-        this.download = function (finalImage) {
-            downloadLink.href = finalImage.src;
-            downloadLink.download = "meme";
-        }
-    }
-
     var initiate = function initiate(canvasID) {
         console.log("Initiating Easy Meme...");
         try {
             var canvasManager = CanvasManager();
             canvasManager.initiate(canvasID);
             this.upload = upload(canvasManager); // CURRY!
-            this.prepareDownloadLink = prepareDownloadLink;
         } catch (e) {
             console.error(e);
         }
@@ -359,9 +372,6 @@ var URLTextBox = document.getElementById("URL-text-box");
 URLTextBox.value = "https://i.imgur.com/32tBLV9.jpg"; // temporary
 
 var fileBox = document.getElementById("file-box");
-
-easyMeme.prepareDownloadLink("download-link");
-//easyMeme.prepareDownloadLink("download-link-small");
 
 var uploadButton = document.getElementById("upload-button");
 uploadButton.addEventListener("click", function () {
