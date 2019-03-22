@@ -4,6 +4,7 @@
 */
 
 function EasyMeme() {
+    // Admittedly over-engineered... simplify later
     var Helper = {
         checkType: function checkType(data, type) {
             if (type && typeof type == "string") {
@@ -225,6 +226,7 @@ function EasyMeme() {
             preliminaryImage.src = src;
             preliminaryImage.crossOrigin = "anonymous";
             preliminaryImage.style.objectFit = "contain";
+            preliminaryImage.style.visibility = "hidden";
             preliminaryImage.style.display = "block";
 
             preliminaryImage.onload = function () {
@@ -232,6 +234,7 @@ function EasyMeme() {
                 document.body.appendChild(image);
                 image.crossOrigin = "anonymous";
                 image.style.objectFit = "contain";
+                image.style.visibility = "hidden";
                 image.style.display = "block";
 
                 image.src = src;
@@ -337,6 +340,7 @@ function EasyMeme() {
                         var memeAssembler = assembleMeme(canvasManager);
                         memeAssembler(src, text, "download-link");
                         memeAssembler(src, text, "download-link-small", 700);
+                        document.getElementById("results-container").style.display = "block";
                     }
                 ).catch(
                     function (e) {
