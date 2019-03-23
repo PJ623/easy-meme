@@ -2,6 +2,8 @@
 <html>
 
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width">
     <title>Easy Meme</title>
     <link rel="stylesheet" type="text/css" href="main.css">
 </head>
@@ -11,21 +13,23 @@
         <h1>Easy Meme</h1>
         <div id="control-panel">
             <div class="file-upload">
-                <input id="URL-text-box" type="text">
+                <input id="URL-text-box" type="text" placeholder="image URL">
                 or
                 <input type="file" id="file-box" accept="image/png, image/jpeg">
             </div>
-            <textarea id="text-text-box" type="text"></textarea>
-            <button id="upload-button">#upload-button</button>
+            <textarea id="text-text-box" type="text" placeholder="caption text goes here"></textarea>
+            <button id="upload-button">Assemble Meme</button>
         </div>
         <div id="results-container">
             <!-- load with placeholder image -->
             <canvas id="result"></canvas>
             <br>
-            <a id="download-link" href="">#download-link</a>
+            <a id="download-link" href="">Download Image</a>
             <br>
-            <a id="download-link-small" href="">#download-link-small</a>
+            <a id="download-link-small" href="">Download Smaller Image</a>
         </div>
+        <br>
+        <a href="https://github.com/PJ623/easy-meme" target="_blank">View code on GitHub</a>
     </div>
     <script src="main.js"></script>
 </body>

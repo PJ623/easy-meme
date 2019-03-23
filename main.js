@@ -373,7 +373,6 @@ easyMeme.initiate(/*"URL-text-box", "upload-button"*/ "result");
 var textTextBox = document.getElementById("text-text-box");
 
 var URLTextBox = document.getElementById("URL-text-box");
-URLTextBox.value = "https://i.imgur.com/32tBLV9.jpg"; // temporary
 
 var fileBox = document.getElementById("file-box");
 
